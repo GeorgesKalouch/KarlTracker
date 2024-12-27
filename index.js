@@ -2,6 +2,7 @@ import "dotenv/config";
 import { Client, GatewayIntentBits } from "discord.js";
 import fetch from "node-fetch";
 import roasts from "./roasts.js";
+import fs from "fs/promises";
 import express from "express";
 
 const client = new Client({
@@ -19,6 +20,24 @@ let cachedMatchId = null;
 app.get("/", (req, res) => {
   res.send("KarlTracker Bot is running!");
 });
+
+async function getCachedMatchId() {
+  try {
+    const data = await fs.readFile("lastMatchId.txt", "utf-8");
+    return data.trim();
+  } catch (err) {
+    console.log("No cached match ID found.");
+    return null;
+  }
+}
+
+async function setCachedMatchId(matchId) {
+  try {
+    await fs.writeFile("lastMatchId.txt", matchId);
+  } catch (err) {
+    console.error("Error saving match ID:", err);
+  }
+}
 
 async function getPuuid(summonerName) {
   const response = await fetch(
@@ -62,10 +81,14 @@ async function checkForMatch() {
   if (!puuid) return;
 
   const lastMatchId = await getLastMatch(puuid);
+  const cachedMatchId = await getCachedMatchId();
+
   if (!lastMatchId || lastMatchId === cachedMatchId) return;
-  cachedMatchId = lastMatchId;
+  await setCachedMatchId(lastMatchId);
+
   const matchDetails = await getMatchDetails(lastMatchId);
   if (!matchDetails) return;
+
   const win = matchDetails.participants.some(
     (player) => player.puuid === puuid && player.win
   );
