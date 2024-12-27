@@ -97,8 +97,10 @@ async function checkForMatch() {
 client.once("ready", () => {
   console.log("Bot is online!");
   checkForMatch();
+
+  const port = process.env.PORT || 3000;
+  console.log(`Listening on port ${port}`);
   setInterval(checkForMatch, 60000);
 });
 
-const port = process.env.PORT || 3000;
 client.login(process.env.DISCORD_TOKEN);
