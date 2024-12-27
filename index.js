@@ -100,4 +100,5 @@ client.once("ready", () => {
   setInterval(checkForMatch, 60000);
 });
 
+const port = process.env.PORT || 3000;
 client.login(process.env.DISCORD_TOKEN);
