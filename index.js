@@ -2,7 +2,7 @@ import "dotenv/config";
 import { Client, GatewayIntentBits } from "discord.js";
 import fetch from "node-fetch";
 import roasts from "./roasts.js";
-import express from express;
+import express from "express";
 
 const client = new Client({
   intents: [
