@@ -2,6 +2,7 @@ import "dotenv/config";
 import { Client, GatewayIntentBits } from "discord.js";
 import fetch from "node-fetch";
 import roasts from "./roasts.js";
+import express from express;
 
 const client = new Client({
   intents: [
@@ -11,7 +12,13 @@ const client = new Client({
   ],
 });
 
+const app = express();
+
 let cachedMatchId = null;
+
+app.get("/", (req, res) => {
+  res.send("KarlTracker Bot is running!");
+});
 
 async function getPuuid(summonerName) {
   const response = await fetch(
@@ -98,9 +105,12 @@ client.once("ready", () => {
   console.log("Bot is online!");
   checkForMatch();
 
-  const port = process.env.PORT || 3000;
-  console.log(`Listening on port ${port}`);
   setInterval(checkForMatch, 60000);
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 client.login(process.env.DISCORD_TOKEN);
