@@ -13,9 +13,17 @@ const client = new Client({
   ],
 });
 
-const app = express();
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isCommand()) return;
 
-let cachedMatchId = null;
+  const { commandName } = interaction;
+
+  if (commandName === "ping") {
+    await interaction.reply("Pong!");
+  }
+});
+
+const app = express();
 
 app.get("/", (req, res) => {
   res.send("KarlTracker Bot is running!");
@@ -75,6 +83,33 @@ async function getMatchDetails(matchId) {
   return matchDetails.info;
 }
 
+async function getRankedStats(puuid) {
+  const summonerResponse = await fetch(
+    `https://eun1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}?api_key=${process.env.RIOT_API_KEY}`
+  );
+  const summonerData = await summonerResponse.json();
+  if (!summonerData.id) {
+    console.error("Error fetching summoner details:", summonerData);
+    return null;
+  }
+
+  const rankResponse = await fetch(
+    `https://eun1.api.riotgames.com/lol/league/v4/entries/by-summoner/${summonerData.id}?api_key=${process.env.RIOT_API_KEY}`
+  );
+  const rankData = await rankResponse.json();
+  if (!Array.isArray(rankData) || rankData.length === 0) {
+    console.error("No ranked data found for the summoner:", summonerData.id);
+    return "Unranked";
+  }
+
+  const soloDuoRank = rankData.find(
+    (entry) => entry.queueType === "RANKED_SOLO_5x5"
+  );
+  return soloDuoRank
+    ? `${soloDuoRank.tier} ${soloDuoRank.rank} (${soloDuoRank.leaguePoints} LP)`
+    : "Unranked";
+}
+
 async function checkForMatch() {
   const summonerName = process.env.SUMMONER_NAME;
   const puuid = await getPuuid(summonerName);
@@ -110,15 +145,18 @@ async function checkForMatch() {
   const result = win ? "Victory!" : "Defeat...";
   const winOrLoseEmoji = win ? "🥳🎉" : "😞";
   const roast = roasts[Math.floor(Math.random() * roasts.length)];
+  const currentRank = await getRankedStats(puuid);
+
   const message = `
   🎮 **Match Update** for ${summonerName}!
 
   🏆 **Result**: ${result} ${winOrLoseEmoji}
   ⏱️ **Game Duration**: ${matchDuration} minutes
-  🕹️ **Game Mode**: ${matchDetails.gameMode}
+  🕹️ **Game Mode**: ${matchDetails.gameMode === "CLASSIC" ? "SOLO/DUO" : "ARAM"}
   💀 **KDA:**: ${kda.kills}/${kda.deaths}/${kda.assists}
+  🏅 **Current Rank**: ${currentRank}
   
-  ${win ? "Great job, keep it up!" : roast}
+   ${win ? "Great job, keep it up!" : roast}
   `;
 
   client.channels.cache.get(process.env.CHANNEL_ID).send(message);
